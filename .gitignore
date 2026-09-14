@@ -9,3 +9,6 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+brew-and-bloom-testimonial.png
+qr_code.py
