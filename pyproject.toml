@@ -1,0 +1,22 @@
+[project]
+name = "automated-testimonial-collection-system"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Marloie Menchavez", email = "marloiemenchavez@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "openai>=3.13.0",
+    "qrcode[pil]>=8.2",
+    "requests>=2.34.2",
+    "schedule>=1.2.2",
+]
+
+[project.scripts]
+automated-testimonial-collection-system = "automated_testimonial_collection_system:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
