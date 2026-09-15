@@ -98,9 +98,3 @@ This is a portfolio project built on a fictional business, so the numbers below 
 - A single shared API client instead of duplicated request/pagination code across scripts
 - Real-time team alerting (Slack webhook) triggered by a specific business condition
 - Scheduled, unattended automation (hourly, weekly, and monthly jobs) via a single persistent process
-
-## Known Limitations
-
-- **No "already sent" flag for the monthly digest.** The scheduler checks every Monday and only sends if it's the first Monday of the month, but nothing records that it sent. If the process restarts and misses that specific Monday's run, that month's digest silently never goes out — there's no reconciliation on catch-up.
-- **The weekly dashboard fetches full Submissions and Follow-ups history every run**, then filters to one week in memory. Fine at portfolio scale; worth revisiting if either table grows large, since the payload per run grows with total history, not with weekly volume.
-- **Duplicate detection also fetches the full Submissions table each run**, for the same reason as the dedup fix described above — this trades per-record API calls for one larger payload, which is the right call now but has the same scale ceiling as the dashboard fetch.
