@@ -1,65 +1,14 @@
-import os
 from collections import Counter
 from datetime import date, datetime, timedelta
-from pathlib import Path
-from urllib.parse import quote
 
-import requests
-from dotenv import load_dotenv
-
-PROJECT_ROOT = Path(__file__).resolve().parents[0]
-load_dotenv(PROJECT_ROOT / ".env")
-
-AIRTABLE_TOKEN = os.getenv("AIRTABLE_TOKEN")
-AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
-
-SUBMISSIONS_TABLE = "Submissions"
-FOLLOW_UPS_TABLE = "Follow-ups"
-SUMMARY_TABLE = "Summary"
-
-if not all([AIRTABLE_TOKEN, AIRTABLE_BASE_ID]):
-    raise RuntimeError("Missing AIRTABLE_TOKEN or AIRTABLE_BASE_ID in .env")
-
-HEADERS = {"Authorization": f"Bearer {AIRTABLE_TOKEN}"}
-
-
-def table_url(table_name):
-    return (
-        f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{quote(table_name, safe='')}"
-    )
-
-
-def airtable_request(method, url, **kwargs):
-    response = requests.request(method, url, headers=HEADERS, timeout=30, **kwargs)
-
-    if not response.ok:
-        raise RuntimeError(
-            f"Airtable request failed ({response.status_code}): {response.text}"
-        )
-
-    return response.json()
-
-
-def get_all_records(table_name):
-    """Retrieve all records from one Airtable table, including every page."""
-    records = []
-    params = {"pageSize": 100}
-
-    while True:
-        data = airtable_request(
-            "GET",
-            table_url(table_name),
-            params=params,
-        )
-        records.extend(data.get("records", []))
-
-        offset = data.get("offset")
-        if not offset:
-            break
-
-        params["offset"] = offset
-
-    return records
+from airtable_client import (
+    FOLLOW_UPS_TABLE,
+    SUBMISSIONS_TABLE,
+    SUMMARY_TABLE,
+    create_record,
+    get_all_records,
+    update_record,
+)
 
 
 def parse_airtable_date(value):
@@ -105,9 +54,9 @@ def get_follow_ups_sent(start_date, end_date):
     return count
 
 
-def find_summary_record(week_ending):
+def find_summary_record(summary_records, week_ending):
     """Return the existing summary record for this week, if it exists."""
-    for record in get_all_records(SUMMARY_TABLE):
+    for record in summary_records:
         stored_week_ending = parse_airtable_date(record["fields"].get("Week Ending"))
 
         if stored_week_ending == week_ending:
@@ -118,21 +67,13 @@ def find_summary_record(week_ending):
 
 def create_or_update_summary(fields, week_ending):
     """Prevent duplicate dashboard rows when the script is run again."""
-    existing_record = find_summary_record(week_ending)
+    existing_record = find_summary_record(get_all_records(SUMMARY_TABLE), week_ending)
 
     if existing_record:
-        airtable_request(
-            "PATCH",
-            f"{table_url(SUMMARY_TABLE)}/{existing_record['id']}",
-            json={"fields": fields},
-        )
+        update_record(SUMMARY_TABLE, existing_record["id"], fields)
         print("Updated the existing weekly summary.")
     else:
-        airtable_request(
-            "POST",
-            table_url(SUMMARY_TABLE),
-            json={"fields": fields},
-        )
+        create_record(SUMMARY_TABLE, fields)
         print("Created a new weekly summary.")
 
 

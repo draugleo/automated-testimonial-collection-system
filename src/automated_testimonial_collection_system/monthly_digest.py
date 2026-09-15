@@ -2,17 +2,8 @@ import os
 import smtplib
 from datetime import date, timedelta
 from email.message import EmailMessage
-from pathlib import Path
-from urllib.parse import quote
 
-import requests
-from dotenv import load_dotenv
-
-PROJECT_ROOT = Path(__file__).resolve().parents[0]
-load_dotenv(PROJECT_ROOT / ".env", override=True)
-
-AIRTABLE_TOKEN = os.getenv("AIRTABLE_TOKEN")
-AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
+from airtable_client import TESTIMONIALS_TABLE, get_all_records
 
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
@@ -21,41 +12,6 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USER)
 OWNER_EMAIL = os.getenv("OWNER_EMAIL", SMTP_USER)
 OWNER_NAME = os.getenv("OWNER_NAME", "there")
-
-TESTIMONIALS_TABLE = "Testimonials"
-
-if not all([AIRTABLE_TOKEN, AIRTABLE_BASE_ID]):
-    raise RuntimeError("Missing AIRTABLE_TOKEN or AIRTABLE_BASE_ID in .env")
-
-HEADERS = {"Authorization": f"Bearer {AIRTABLE_TOKEN}"}
-
-
-def table_url(table_name):
-    return (
-        f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{quote(table_name, safe='')}"
-    )
-
-
-def airtable_request(method, url, **kwargs):
-    response = requests.request(method, url, headers=HEADERS, timeout=30, **kwargs)
-    if not response.ok:
-        raise RuntimeError(
-            f"Airtable request failed ({response.status_code}): {response.text}"
-        )
-    return response.json()
-
-
-def get_all_records(table_name):
-    records = []
-    params = {"pageSize": 100}
-    while True:
-        data = airtable_request("GET", table_url(table_name), params=params)
-        records.extend(data.get("records", []))
-        offset = data.get("offset")
-        if not offset:
-            break
-        params["offset"] = offset
-    return records
 
 
 def previous_month_label():
